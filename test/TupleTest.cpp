@@ -25,6 +25,9 @@ TEST(TupleTest, TupleCat) {
   Tuple<int, int, double> mt1(1, 1, 1.);
   Tuple<float, float, int> mt2(1., 1., 1);
   EXPECT_TRUE(TwoTuplesCat(mt1, mt2) == MakeTuple(1, 1, 1., 1., 1., 1));
+  EXPECT_TRUE(TupleCat(MakeTuple(1, 2, 3), MakeTuple(4, 5, 6),
+                       MakeTuple(7, 8, 9, 10)) ==
+              MakeTuple(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
 }
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

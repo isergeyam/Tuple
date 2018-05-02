@@ -154,8 +154,9 @@ get(Tuple<Types...> const &tup) noexcept {
 template <size_t I, typename... Types>
 constexpr std::remove_reference_t<TypeAtIndex_t<I, Types...>> &&
 get(Tuple<Types...> &&tup) noexcept {
-  std::remove_reference_t<TypeAtIndex_t<I, Types...>> &&base = std::move(tup);
-  return base.value_;
+  TupleElement<I, std::remove_reference_t<TypeAtIndex_t<I, Types...>>> &&base =
+      std::move(tup);
+  return std::move(base.value_);
 }
 template <typename> constexpr int CountType() { return 0; }
 template <typename T, typename Head, typename... Tail>
@@ -188,18 +189,34 @@ constexpr T &&get(Tuple<Types...> &&t) noexcept {
 }
 template <typename Tuple1, size_t... Indices1, typename Tuple2,
           size_t... Indices2>
-auto TwoTuplesCatHelper(Tuple1 &&t1, IndexSequence<Indices1...>, Tuple2 &&t2,
-                        IndexSequence<Indices2...>) {
+auto __TwoTuplesCatHelper(Tuple1 &&t1, IndexSequence<Indices1...>, Tuple2 &&t2,
+                          IndexSequence<Indices2...>) {
   return MakeTuple(get<Indices1>(std::forward<Tuple1>(t1))...,
                    get<Indices2>(std::forward<Tuple2>(t2))...);
 }
 template <typename Tuple1, typename Tuple2>
 constexpr auto TwoTuplesCat(Tuple1 &&t1, Tuple2 &&t2) {
-  return TwoTuplesCatHelper(
+  return __TwoTuplesCatHelper(
       std::forward<Tuple1>(t1),
       MakeIndexSequence<std::remove_reference_t<Tuple1>::Size>(),
       std::forward<Tuple2>(t2),
       MakeIndexSequence<std::remove_reference_t<Tuple2>::Size>());
+}
+template <typename... Tuples> constexpr auto TupleCat(Tuples &&...);
+template <typename HeadTuple1, typename HeadTuple2, typename... TailTuples>
+constexpr auto TupleCat(HeadTuple1 &&t1, HeadTuple2 &&t2,
+                        TailTuples &&... OtherTuples) {
+  return TwoTuplesCat(
+      TwoTuplesCat(std::forward<HeadTuple1>(t1), std::forward<HeadTuple2>(t2)),
+      TupleCat(OtherTuples...));
+}
+template <typename HeadTuple1, typename HeadTuple2>
+constexpr auto TupleCat(HeadTuple1 &&t1, HeadTuple2 &&t2) {
+  return TwoTuplesCat(std::forward<HeadTuple1>(t1),
+                      std::forward<HeadTuple2>(t2));
+}
+template <typename HeadTuple> constexpr auto TupleCat(HeadTuple &&t) {
+  return std::forward<HeadTuple>(t);
 }
 template <typename _Tp, typename _Up, size_t __i, size_t __size>
 struct __TupleCompare {
