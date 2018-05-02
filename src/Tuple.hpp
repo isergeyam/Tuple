@@ -5,9 +5,6 @@ template <typename... Types> class Tuple;
 template <size_t... Indices> struct IndexSequence {
   using type = IndexSequence<Indices...>;
 };
-template <typename... Types> struct TypeSequence {
-  using type = TypeSequence<Types...>;
-};
 template <size_t I, typename Sequence> struct CatIndexSequence;
 template <size_t I, size_t... Indices>
 struct CatIndexSequence<I, IndexSequence<Indices...>>
@@ -25,17 +22,7 @@ template <size_t, typename T> struct TupleElement {
             typename = std::enable_if_t<std::is_convertible<U, T>::value>>
   explicit TupleElement(U &&value_) : value_(std::forward<U>(value_)) {}
 };
-template <typename... Types> struct IsTuple : std::false_type {};
 template <typename Sequences, typename... Types> struct TupleImpl;
-template <typename> struct IsTupleImpl : std::false_type {};
-template <size_t... Indices, typename... Types>
-struct IsTupleImpl<TupleImpl<IndexSequence<Indices...>, Types...>>
-    : std::true_type {};
-template <template <class> class> constexpr bool IsAnyOf() { return false; }
-template <template <class> class Obj, typename Head, typename... Tail>
-constexpr bool IsAnyOf() {
-  return Obj<Head>::value || IsAnyOf<Obj, Tail...>();
-}
 template <class T> struct unwrap_refwrapper { using type = T; };
 
 template <class T> struct unwrap_refwrapper<std::reference_wrapper<T>> {
@@ -64,18 +51,6 @@ template <typename T, typename... Types>
 constexpr T const &get(Tuple<Types...> const &t) noexcept;
 template <typename T, typename... Types>
 constexpr T &&get(Tuple<Types...> &&t) noexcept;
-template <class...> struct conjunction : std::true_type {};
-template <class B1> struct conjunction<B1> : B1 {};
-template <class B1, class... Bn>
-struct conjunction<B1, Bn...>
-    : std::conditional_t<bool(B1::value), conjunction<Bn...>, B1> {};
-template <class...> struct disjunction : std::false_type {};
-template <class B1> struct disjunction<B1> : B1 {};
-template <class B1, class... Bn>
-struct disjunction<B1, Bn...>
-    : std::conditional_t<bool(B1::value), B1, disjunction<Bn...>> {};
-template <size_t Val1, size_t Val2> struct IsEqual : std::false_type {};
-template <size_t Val1> struct IsEqual<Val1, Val1> : std::true_type {};
 template <size_t... Indices, typename... Types>
 struct TupleImpl<IndexSequence<Indices...>, Types...>
     : TupleElement<Indices, Types>... {
@@ -85,17 +60,11 @@ struct TupleImpl<IndexSequence<Indices...>, Types...>
       typename = std::enable_if_t<sizeof...(Types) == sizeof...(OtherTypes)>>
   explicit TupleImpl(OtherTypes &&... values)
       : TupleElement<Indices, Types>(std::forward<OtherTypes>(values))... {}
-  /*template <
-      typename... OtherTypes,
-      typename = std::enable_if_t<!IsEqual<sizeof...(OtherTypes), 1>::value>>
-  explicit TupleImpl(OtherTypes &&... values)
-      : TupleElement<Indices, Types>(std::forward<OtherTypes>(values))... {}*/
 };
 template <typename... Types>
 class Tuple
     : public TupleImpl<MakeIndexSequence_t<sizeof...(Types)>, Types...> {
   using Base_t = TupleImpl<MakeIndexSequence_t<sizeof...(Types)>, Types...>;
-  using InnerTypes = TypeSequence<Types...>;
 
 public:
   Tuple() = default;
@@ -112,32 +81,6 @@ public:
     other = std::move(*this);
     *this = std::move(tmp);
   }
-  /*template <typename... OtherTypes, size_t... Indices>
-  explicit Tuple(Tuple<OtherTypes...> &&other, IndexSequence<Indices...>)
-      : Base_t(std::forward<TypeAtIndex_t<Indices, OtherTypes...>(get<Indices>(
-                   std::forward<Tuple<OtherTypes...>>(other)))...>) {}
-  template <typename... OtherTypes>
-  explicit Tuple(Tuple<OtherTypes...> &&other)
-      : Tuple(std::forward<Tuple<OtherTypes...>>(other),
-              MakeIndexSequence<Size>()) {}
-  template <typename... OtherTypes>
-  constexpr bool operator<(const Tuple<OtherTypes...> &other) {
-    for (size_t i = 0; i < Size; ++i) {
-      if (get<i>(*this) < get<i>(other))
-        return true;
-      else if (get<i>(*this) > get<i>(other))
-        return false;
-    }
-    return false;
-  }
-  template <typename... OtherTypes>
-  constexpr bool operator==(const Tuple<OtherTypes...> &other) {
-    for (size_t i = 0; i < Size; ++i) {
-      if (get<i>(*this) != get<i>(other))
-        return false;
-    }
-    return true;
-  }*/
 };
 template <typename... Types> constexpr size_t Tuple<Types...>::Size;
 template <size_t I, typename... Types>
